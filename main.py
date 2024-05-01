@@ -1,5 +1,5 @@
-from gui import platinum
+from gui import Platinum
 
 if __name__ == "__main__":
-    app = platinum()
+    app = Platinum()
     app.mainloop()
