@@ -15,30 +15,59 @@ class Platinum(tk.Tk):
         self.geometry("800x600")
         self.word_manager = WordManager()
         self.toaster = ToastNotifier()
-        self.word_entry = tk.Entry(self)
+
+        # tkinter framing
+        self.left_frame = tk.Frame(self)
+        self.left_frame.pack(side=tk.LEFT, padx=20, pady=20, fill=tk.BOTH, expand=True)
+        self.middle_frame = tk.Frame(self)
+        self.middle_frame.pack(side=tk.LEFT, padx=20, pady=20, fill=tk.BOTH, expand=True)
+        self.right_frame = tk.Frame(self)
+        self.right_frame.pack(side=tk.LEFT, padx=20, pady=20, fill=tk.BOTH, expand=True)
+
+        # word entry and add button
+        self.word_entry = tk.Entry(self.left_frame)
         self.word_entry.pack()
-        self.add_button = tk.Button(self, text="Add Word", command=self.add_word)
+        self.add_button = tk.Button(self.left_frame, text="Add Word", command=self.add_word)
         self.add_button.pack()
-        self.word_list = tk.Listbox(self)
-        self.word_list.pack()
-        self.noti_words_list = tk.Listbox(self)
-        self.noti_words_list.pack()
+
+        # word listbox and label
+        self.word_list_label = tk.Label(self.left_frame, text="Word List")
+        self.word_list_label.pack()
+        self.word_list = tk.Listbox(self.left_frame)
+        self.word_list.pack(fill=tk.BOTH, expand=True)
+
+        # timing and control buttons
+        self.interval_label = tk.Label(self.middle_frame, text="Notification Interval (minutes):")
+        self.interval_label.pack()
+        self.interval_entry = tk.Entry(self.middle_frame)
+        self.interval_entry.insert(tk.END, "1")
+        self.interval_entry.pack()
+        self.interval_button = tk.Button(self.middle_frame, text="Set Interval", command=self.set_interval)
+        self.interval_button.pack()
+        self.toggle_button = tk.Button(self.middle_frame, text="Start Notifications", command=self.toggle_notifications)
+        self.toggle_button.pack()
+        self.add_to_noti_button = tk.Button(self.middle_frame, text="Add to Notifications", command=self.add_to_noti_words)
+        self.add_to_noti_button.pack()
+        self.delete_button = tk.Button(self.middle_frame, text="Delete Word", command=self.delete_word)
+        self.delete_button.pack()
+
+        # notification words listbox and label
+        self.noti_words_label = tk.Label(self.right_frame, text="Notification Words")
+        self.noti_words_label.pack()
+        self.noti_words_list = tk.Listbox(self.right_frame)
+        self.noti_words_list.pack(fill=tk.BOTH, expand=True)
+
+        # load words from words.json and noti_words.json
         self.load_words()
         self.load_noti_words()
 
-        # toggle notification button
-        self.toggle_button = tk.Button(self, text="Start Notifications", command=self.toggle_notifications)
-        self.toggle_button.pack()
-
-        # add/delete buttons
-        self.add_to_noti_button = tk.Button(self, text="Add to Notifications", command=self.add_to_noti_words)
-        self.add_to_noti_button.pack()
-        self.delete_button = tk.Button(self, text="Delete Word", command=self.delete_word)
-        self.delete_button.pack()
+        # set default notification interval
+        self.interval = 5
 
         # system tray
         self.tray_icon = None
         self.protocol("WM_DELETE_WINDOW", self.hide_window)
+
 
     # save a word to the words.json file
     def add_word(self):
@@ -62,22 +91,22 @@ class Platinum(tk.Tk):
 
     # function for thread to call to display a toast every interval
     # loops through all notification words (currently not random)
-    def display_notifications(self, interval):
+    def display_notifications(self):
         while not self.notification_thread_stop_event.is_set():
             if self.word_manager.noti_words:
                 for word in self.word_manager.noti_words:
                     if self.notification_thread_stop_event.is_set():
                         break
                     self.toaster.show_toast("platinum", word, icon_path="icon.ico", duration=1)
-                    time.sleep(interval)
+                    time.sleep(self.interval)
             else:
-                time.sleep(interval)
+                time.sleep(self.interval)
 
     # function to toggle the notification thread on or off (restarts)
     def toggle_notifications(self):
         if not hasattr(self, 'notification_thread') or not self.notification_thread.is_alive():
             self.notification_thread_stop_event = threading.Event()
-            self.notification_thread = threading.Thread(target=self.display_notifications, args=(5,), daemon=True)
+            self.notification_thread = threading.Thread(target=self.display_notifications, daemon=True)
             self.notification_thread.start()
             self.toggle_button.config(text="Pause Notifications")
         else:
@@ -105,6 +134,14 @@ class Platinum(tk.Tk):
             word = self.noti_words_list.get(selected)
             self.word_manager.remove_from_noti_words(word)
             self.load_noti_words()
+
+    # function to set the interval of notifcations
+    def set_interval(self):
+        try:
+            interval_minutes = int(self.interval_entry.get())
+            self.interval = interval_minutes * 60  # convert minutes to seconds
+        except ValueError:
+            pass
 
     # system tray icon to exit the app
     def quit(self):
