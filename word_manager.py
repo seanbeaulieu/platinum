@@ -1,60 +1,88 @@
 import json
 
+class Vocab:
+    def __init__(self, word, definition, active=True):
+        self.word = word
+        self.definition = definition
+        self.active = active
+
+class Group:
+    def __init__(self, name, vocab_list=None, active=True):
+        self.name = name
+        self.vocab_list = vocab_list or []
+        self.active = active
+
 class WordManager:
     def __init__(self):
-        self.words_file = "words.json"
-        self.noti_words_file = "noti_words.json"
-        self.words = self.load_words()
-        self.noti_words = self.load_noti_words()
+        self.groups_file = "groups.json"
+        self.groups = self.load_groups()
 
-    def load_words(self):
+    def load_groups(self):
         try:
-            with open(self.words_file, "r") as file:
-                return json.load(file)
+            with open(self.groups_file, "r") as file:
+                group_data = json.load(file)
+                groups = []
+                for group in group_data:
+                    vocab_list = [Vocab(vocab["word"], vocab["definition"], vocab["active"]) for vocab in group["vocab_list"]]
+                    groups.append(Group(group["name"], vocab_list, group["active"]))
+                return groups
         except FileNotFoundError:
             return []
 
-    def save_words(self):
-        with open(self.words_file, "w") as file:
-            json.dump(self.words, file)
+    def save_groups(self):
+        group_data = []
+        for group in self.groups:
+            vocab_data = [{"word": vocab.word, "definition": vocab.definition, "active": vocab.active} for vocab in group.vocab_list]
+            group_data.append({"name": group.name, "vocab_list": vocab_data, "active": group.active})
+        with open(self.groups_file, "w") as file:
+            json.dump(group_data, file)
 
-    # storing words as a dictionary
-    def add_word(self, word, definition):
-        if word not in self.words:
-            self.words[word] = definition
-            self.save_words()
+    def add_group(self, group_name):
+        if not any(group.name == group_name for group in self.groups):
+            self.groups.append(Group(group_name))
+            self.save_groups()
 
-    def delete_word(self, word):
-        if word in self.words:
-            self.words.remove(word)
-            self.save_words()
-        if word in self.noti_words:
-            self.noti_words.remove(word)
-            self.save_noti_words()
+    def delete_group(self, group_name):
+        self.groups = [group for group in self.groups if group.name != group_name]
+        self.save_groups()
 
-    def get_words(self):
-        return self.words
+    def add_vocab(self, group_name, word, definition):
+        for group in self.groups:
+            if group.name == group_name:
+                if not any(vocab.word == word for vocab in group.vocab_list):
+                    group.vocab_list.append(Vocab(word, definition))
+                    self.save_groups()
+                break
 
-    def load_noti_words(self):
-        try:
-            with open(self.noti_words_file, "r") as file:
-                return json.load(file)
-        except FileNotFoundError:
-            return []
+    def delete_vocab(self, group_name, word):
+        for group in self.groups:
+            if group.name == group_name:
+                group.vocab_list = [vocab for vocab in group.vocab_list if vocab.word != word]
+                self.save_groups()
+                break
 
-    def save_noti_words(self):
-        with open(self.noti_words_file, "w") as file:
-            json.dump(self.noti_words, file)
+    def get_groups(self):
+        return self.groups
 
-    def add_to_noti_words(self, word, definition):
-        if word not in self.noti_words:
-            self.noti_words[word] = definition
-            self.save_noti_words()
+    def get_vocab_list(self, group_name):
+        for group in self.groups:
+            if group.name == group_name:
+                return group.vocab_list
+        return []
 
-    def remove_from_noti_words(self, word):
-        if word in self.noti_words:
-            self.noti_words.remove(word)
-            self.save_noti_words()
+    def set_group_active(self, group_name, active):
+        for group in self.groups:
+            if group.name == group_name:
+                group.active = active
+                self.save_groups()
+                break
 
-    def get_noti_words(self):
-        return self.noti_words
+    def set_vocab_active(self, group_name, word, active):
+        for group in self.groups:
+            if group.name == group_name:
+                for vocab in group.vocab_list:
+                    if vocab.word == word:
+                        vocab.active = active
+                        self.save_groups()
+                        break
+                break

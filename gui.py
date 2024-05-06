@@ -1,5 +1,5 @@
 import tkinter as tk
-from word_manager import WordManager
+from word_manager import WordManager, Vocab, Group
 from win10toast import ToastNotifier
 import threading
 import time
@@ -25,30 +25,49 @@ class Platinum(tk.Tk):
         self.right_frame = tk.Frame(self)
         self.right_frame.pack(side=tk.LEFT, padx=20, pady=20, fill=tk.BOTH, expand=True)
 
-         # word label and entry
+        # group label and entry
+        group_frame = tk.Frame(self.left_frame)
+        group_frame.pack(anchor=tk.W)
+        self.group_label = tk.Label(group_frame, text="Group:")
+        self.group_label.pack(side=tk.LEFT)
+        self.group_entry = tk.Entry(group_frame)
+        self.group_entry.pack(side=tk.LEFT)
+
+        # word label and entry
         word_frame = tk.Frame(self.left_frame)
-        word_frame.pack(anchor=tk.W)  # Align the frame to the left
+        word_frame.pack(anchor=tk.W)
         self.word_label = tk.Label(word_frame, text="Word:")
         self.word_label.pack(side=tk.LEFT)
         self.word_entry = tk.Entry(word_frame)
-        self.word_entry.pack(side=tk.LEFT)  # Add right padding to the entry
+        self.word_entry.pack(side=tk.LEFT)
 
         # definition label and entry
         definition_frame = tk.Frame(self.left_frame)
-        definition_frame.pack(anchor=tk.W)  # Align the frame to the left
+        definition_frame.pack(anchor=tk.W)
         self.definition_label = tk.Label(definition_frame, text="Definition:")
         self.definition_label.pack(side=tk.LEFT)
         self.definition_entry = tk.Entry(definition_frame)
         self.definition_entry.pack(side=tk.LEFT)
 
-        # add button
-        self.add_button = tk.Button(self.left_frame, text="Add Word", command=self.add_word)
-        self.add_button.pack()
-        
+        # add group and word buttons
+        button_frame = tk.Frame(self.left_frame)
+        button_frame.pack()
+        self.add_group_button = tk.Button(button_frame, text="Add Group", command=self.add_group)
+        self.add_group_button.pack(side=tk.LEFT)
+        self.add_word_button = tk.Button(button_frame, text="Add Word", command=self.add_word)
+        self.add_word_button.pack(side=tk.LEFT)
+
+        # group listbox and label
+        self.group_list_label = tk.Label(self.left_frame, text="Groups")
+        self.group_list_label.pack()
+        self.group_list = tk.Listbox(self.left_frame)
+        self.group_list.pack(fill=tk.BOTH, expand=True)
+        self.group_list.bind("<<ListboxSelect>>", self.select_group)
+
         # word listbox and label
-        self.word_list_label = tk.Label(self.left_frame, text="Word List")
+        self.word_list_label = tk.Label(self.right_frame, text="Words")
         self.word_list_label.pack()
-        self.word_list = tk.Listbox(self.left_frame)
+        self.word_list = tk.Listbox(self.right_frame)
         self.word_list.pack(fill=tk.BOTH, expand=True)
 
         # timing and control buttons
@@ -61,20 +80,19 @@ class Platinum(tk.Tk):
         self.interval_button.pack()
         self.toggle_button = tk.Button(self.middle_frame, text="Start Notifications", command=self.toggle_notifications)
         self.toggle_button.pack()
-        self.add_to_noti_button = tk.Button(self.middle_frame, text="Add to Notifications", command=self.add_to_noti_words)
-        self.add_to_noti_button.pack()
-        self.delete_button = tk.Button(self.middle_frame, text="Delete Word", command=self.delete_word)
-        self.delete_button.pack()
+        self.delete_group_button = tk.Button(self.middle_frame, text="Delete Group", command=self.delete_group)
+        self.delete_group_button.pack()
+        self.delete_word_button = tk.Button(self.middle_frame, text="Delete Word", command=self.delete_word)
+        self.delete_word_button.pack()
 
-        # notification words listbox and label
-        self.noti_words_label = tk.Label(self.right_frame, text="Notification Words")
-        self.noti_words_label.pack()
-        self.noti_words_list = tk.Listbox(self.right_frame)
-        self.noti_words_list.pack(fill=tk.BOTH, expand=True)
+        # toggle word and group active buttons
+        self.toggle_group_button = tk.Button(self.middle_frame, text="Toggle Group Active", command=self.toggle_group_active)
+        self.toggle_group_button.pack()
+        self.toggle_word_button = tk.Button(self.middle_frame, text="Toggle Word Active", command=self.toggle_word_active)
+        self.toggle_word_button.pack()
 
-        # load words from words.json and noti_words.json
-        self.load_words()
-        self.load_noti_words()
+        # load groups and words
+        self.load_groups()
 
         # set default notification interval
         self.interval = 5
@@ -83,47 +101,63 @@ class Platinum(tk.Tk):
         self.tray_icon = None
         self.protocol("WM_DELETE_WINDOW", self.hide_window)
 
+    def add_group(self):
+        group_name = self.group_entry.get()
+        self.word_manager.add_group(group_name)
+        self.group_entry.delete(0, tk.END)
+        self.load_groups()
 
-    # save a word to the words.json file
     def add_word(self):
-        # pull the word from the entry fields and add to word_manager
+        group_name = self.group_entry.get()
         word = self.word_entry.get()
         definition = self.definition_entry.get()
-        self.word_manager.add_word(word, definition)
-
-        # clear the fields
+        self.word_manager.add_vocab(group_name, word, definition)
         self.word_entry.delete(0, tk.END)
         self.definition_entry.delete(0, tk.END)
         self.load_words()
 
-    # load all the words into gui word_list
+    def load_groups(self):
+        self.group_list.delete(0, tk.END)
+        groups = self.word_manager.get_groups()
+        for group in groups:
+            if group.active:
+                self.group_list.insert(tk.END, group.name)
+            else:
+                self.group_list.insert(tk.END, group.name)
+                self.group_list.itemconfig(tk.END, fg="gray")
+
     def load_words(self):
         self.word_list.delete(0, tk.END)
-        words = self.word_manager.get_words()
-        for word, definition in words.items():
-            self.word_list.insert(tk.END, f"{word}: {definition}")
+        group_name = self.group_entry.get()
+        vocab_list = self.word_manager.get_vocab_list(group_name)
+        for vocab in vocab_list:
+            if vocab.active:
+                self.word_list.insert(tk.END, f"{vocab.word}: {vocab.definition}")
+            else:
+                self.word_list.insert(tk.END, f"{vocab.word}: {vocab.definition}")
+                self.word_list.itemconfig(tk.END, fg="gray")
 
-    # load all the words from noti_words.json
-    def load_noti_words(self):
-        self.noti_words_list.delete(0, tk.END)
-        for word in self.word_manager.noti_words:
-            self.noti_words_list.insert(tk.END, word)
+    def select_group(self, event):
+        selected_group = self.group_list.get(self.group_list.curselection())
+        self.group_entry.delete(0, tk.END)
+        self.group_entry.insert(tk.END, selected_group)
+        self.load_words()
 
-    # function for thread to call to display a toast every interval
-    # loops through all notification words (currently not random)
+    # notifications
     def display_notifications(self):
         while not self.notification_thread_stop_event.is_set():
-            if self.word_manager.noti_words:
-                noti_words = self.word_manager.get_noti_words()
-                for word, definition in noti_words.items():
-                    if self.notification_thread_stop_event.is_set():
-                        break
-                    self.toaster.show_toast(word, definition, icon_path="icon.ico", duration=3)
-                    time.sleep(self.interval)
-            else:
-                time.sleep(self.interval)
+            groups = self.word_manager.get_groups()
+            for group in groups:
+                if group.active:
+                    vocab_list = group.vocab_list
+                    for vocab in vocab_list:
+                        if vocab.active:
+                            if self.notification_thread_stop_event.is_set():
+                                break
+                            self.toaster.show_toast(vocab.word, vocab.definition, icon_path="icon.ico", duration=3)
+                            time.sleep(self.interval)
+            time.sleep(self.interval)
 
-    # function to toggle the notification thread on or off (restarts)
     def toggle_notifications(self):
         if not hasattr(self, 'notification_thread') or not self.notification_thread.is_alive():
             self.notification_thread_stop_event = threading.Event()
@@ -135,28 +169,36 @@ class Platinum(tk.Tk):
             self.notification_thread.join()
             self.toggle_button.config(text="Resume Notifications")
 
-    # add a word from word_list to noti_words_list
-    def add_to_noti_words(self):
-        selected = self.word_list.curselection()
-        if selected:
-            word = self.word_list.get(selected)
-            self.word_manager.add_to_noti_words(word, word[definition])
-            self.load_noti_words()
+    # group and word 'active' setters
+    def toggle_group_active(self):
+        selected_group = self.group_list.get(self.group_list.curselection())
+        group = next((group for group in self.word_manager.get_groups() if group.name == selected_group), None)
+        if group:
+            self.word_manager.set_group_active(selected_group, not group.active)
+            self.load_groups()
 
-    # remove a word from either list
-    def delete_word(self):
-        selected = self.word_list.curselection()
-        if selected:
-            word = self.word_list.get(selected)
-            self.word_manager.delete_word(word)
+    def toggle_word_active(self):
+        group_name = self.group_entry.get()
+        selected_word = self.word_list.get(self.word_list.curselection())
+        word = selected_word.split(":")[0].strip()
+        vocab = next((vocab for vocab in self.word_manager.get_vocab_list(group_name) if vocab.word == word), None)
+        if vocab:
+            self.word_manager.set_vocab_active(group_name, word, not vocab.active)
             self.load_words()
-        selected = self.noti_words_list.curselection()
-        if selected:
-            word = self.noti_words_list.get(selected)
-            self.word_manager.remove_from_noti_words(word)
-            self.load_noti_words()
 
-    # function to set the interval of notifcations
+    def delete_group(self):
+        selected_group = self.group_list.get(self.group_list.curselection())
+        self.word_manager.delete_group(selected_group)
+        self.load_groups()
+        self.word_list.delete(0, tk.END)
+
+    def delete_word(self):
+        group_name = self.group_entry.get()
+        selected_word = self.word_list.get(self.word_list.curselection())
+        word = selected_word.split(":")[0].strip()
+        self.word_manager.delete_vocab(group_name, word)
+        self.load_words()
+
     def set_interval(self):
         try:
             interval_minutes = int(self.interval_entry.get())
@@ -164,7 +206,6 @@ class Platinum(tk.Tk):
         except ValueError:
             pass
 
-    # system tray icon to exit the app
     def quit(self):
         if hasattr(self, 'notification_thread'):
             self.stop_notification_thread()
@@ -176,13 +217,11 @@ class Platinum(tk.Tk):
         except SystemExit:
             pass
 
-    # stop notifications function
     def stop_notification_thread(self):
         if hasattr(self, 'notification_thread') and self.notification_thread.is_alive():
             self.notification_thread_stop_event.set()
             self.notification_thread.join()
 
-    # on closing the app, minimizes it to system tray instead
     def hide_window(self):
         self.iconify()
         image = Image.open("icon.ico")
@@ -190,7 +229,6 @@ class Platinum(tk.Tk):
         self.tray_icon = pystray.Icon("platinum", image, "platinum", menu)
         self.tray_icon.run_detached()
 
-    # system tray icon function to reopen window
     def show_window(self):
         self.deiconify()
         if self.tray_icon:
