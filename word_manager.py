@@ -18,9 +18,10 @@ class WordManager:
         with open(self.words_file, "w") as file:
             json.dump(self.words, file)
 
-    def add_word(self, word):
+    # storing words as a dictionary
+    def add_word(self, word, definition):
         if word not in self.words:
-            self.words.append(word)
+            self.words[word] = definition
             self.save_words()
 
     def delete_word(self, word):
@@ -45,12 +46,15 @@ class WordManager:
         with open(self.noti_words_file, "w") as file:
             json.dump(self.noti_words, file)
 
-    def add_to_noti_words(self, word):
+    def add_to_noti_words(self, word, definition):
         if word not in self.noti_words:
-            self.noti_words.append(word)
+            self.noti_words[word] = definition
             self.save_noti_words()
 
     def remove_from_noti_words(self, word):
         if word in self.noti_words:
             self.noti_words.remove(word)
             self.save_noti_words()
+
+    def get_noti_words(self):
+        return self.noti_words

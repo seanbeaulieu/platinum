@@ -13,6 +13,7 @@ class Platinum(tk.Tk):
         super().__init__()
         self.title("platinum")
         self.geometry("800x600")
+        self.iconbitmap("icon.ico")
         self.word_manager = WordManager()
         self.toaster = ToastNotifier()
 
@@ -20,16 +21,30 @@ class Platinum(tk.Tk):
         self.left_frame = tk.Frame(self)
         self.left_frame.pack(side=tk.LEFT, padx=20, pady=20, fill=tk.BOTH, expand=True)
         self.middle_frame = tk.Frame(self)
-        self.middle_frame.pack(side=tk.LEFT, padx=20, pady=20, fill=tk.BOTH, expand=True)
+        self.middle_frame.pack(side=tk.LEFT, padx=20, pady=20, fill=tk.BOTH, expand=False)
         self.right_frame = tk.Frame(self)
         self.right_frame.pack(side=tk.LEFT, padx=20, pady=20, fill=tk.BOTH, expand=True)
 
-        # word entry and add button
-        self.word_entry = tk.Entry(self.left_frame)
-        self.word_entry.pack()
+         # word label and entry
+        word_frame = tk.Frame(self.left_frame)
+        word_frame.pack(anchor=tk.W)  # Align the frame to the left
+        self.word_label = tk.Label(word_frame, text="Word:")
+        self.word_label.pack(side=tk.LEFT)
+        self.word_entry = tk.Entry(word_frame)
+        self.word_entry.pack(side=tk.LEFT)  # Add right padding to the entry
+
+        # definition label and entry
+        definition_frame = tk.Frame(self.left_frame)
+        definition_frame.pack(anchor=tk.W)  # Align the frame to the left
+        self.definition_label = tk.Label(definition_frame, text="Definition:")
+        self.definition_label.pack(side=tk.LEFT)
+        self.definition_entry = tk.Entry(definition_frame)
+        self.definition_entry.pack(side=tk.LEFT)
+
+        # add button
         self.add_button = tk.Button(self.left_frame, text="Add Word", command=self.add_word)
         self.add_button.pack()
-
+        
         # word listbox and label
         self.word_list_label = tk.Label(self.left_frame, text="Word List")
         self.word_list_label.pack()
@@ -71,17 +86,22 @@ class Platinum(tk.Tk):
 
     # save a word to the words.json file
     def add_word(self):
+        # pull the word from the entry fields and add to word_manager
         word = self.word_entry.get()
-        self.word_manager.add_word(word)
+        definition = self.definition_entry.get()
+        self.word_manager.add_word(word, definition)
+
+        # clear the fields
         self.word_entry.delete(0, tk.END)
+        self.definition_entry.delete(0, tk.END)
         self.load_words()
 
     # load all the words into gui word_list
     def load_words(self):
         self.word_list.delete(0, tk.END)
         words = self.word_manager.get_words()
-        for word in words:
-            self.word_list.insert(tk.END, word)
+        for word, definition in words.items():
+            self.word_list.insert(tk.END, f"{word}: {definition}")
 
     # load all the words from noti_words.json
     def load_noti_words(self):
@@ -94,10 +114,11 @@ class Platinum(tk.Tk):
     def display_notifications(self):
         while not self.notification_thread_stop_event.is_set():
             if self.word_manager.noti_words:
-                for word in self.word_manager.noti_words:
+                noti_words = self.word_manager.get_noti_words()
+                for word, definition in noti_words.items():
                     if self.notification_thread_stop_event.is_set():
                         break
-                    self.toaster.show_toast("platinum", word, icon_path="icon.ico", duration=1)
+                    self.toaster.show_toast(word, definition, icon_path="icon.ico", duration=3)
                     time.sleep(self.interval)
             else:
                 time.sleep(self.interval)
@@ -119,7 +140,7 @@ class Platinum(tk.Tk):
         selected = self.word_list.curselection()
         if selected:
             word = self.word_list.get(selected)
-            self.word_manager.add_to_noti_words(word)
+            self.word_manager.add_to_noti_words(word, word[definition])
             self.load_noti_words()
 
     # remove a word from either list
