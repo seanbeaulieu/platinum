@@ -8,6 +8,8 @@ import pystray
 from pystray import Icon as icon, MenuItem as item
 from PIL import Image
 
+# Sean Beaulieu
+
 class Platinum(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -192,6 +194,7 @@ class Platinum(tk.Tk):
         self.load_groups()
         self.word_list.delete(0, tk.END)
 
+    # grabs the word by getting string before ':'
     def delete_word(self):
         group_name = self.group_entry.get()
         selected_word = self.word_list.get(self.word_list.curselection())
