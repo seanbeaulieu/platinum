@@ -7,6 +7,7 @@ import sys
 import pystray
 from pystray import Icon as icon, MenuItem as item
 from PIL import Image
+from tkinter import filedialog, messagebox
 
 # Sean Beaulieu
 
@@ -58,6 +59,9 @@ class Platinum(tk.Tk):
         self.add_group_button.pack(side=tk.LEFT)
         self.add_word_button = tk.Button(button_frame, text="Add Word", command=self.add_word)
         self.add_word_button.pack(side=tk.LEFT)
+        self.import_button = tk.Button(button_frame, text="Import CSV", command=self.import_csv)
+        self.import_button.pack(side=tk.LEFT)
+        
 
         # group listbox and label
         self.group_list_label = tk.Label(self.left_frame, text="Groups")
@@ -117,6 +121,22 @@ class Platinum(tk.Tk):
         self.word_entry.delete(0, tk.END)
         self.definition_entry.delete(0, tk.END)
         self.load_words()
+
+    # import csv
+    def import_csv(self):
+        file_path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
+        if file_path:
+            group_name = self.group_entry.get()
+            if not group_name:
+                messagebox.showerror("Error", "Please enter a group name.")
+                return
+            if not any(group.name == group_name for group in self.word_manager.get_groups()):
+                self.word_manager.add_group(group_name)
+            self.word_manager.import_vocab_from_csv(group_name, file_path)
+            self.load_groups()
+            self.group_entry.delete(0, tk.END)
+            self.group_entry.insert(tk.END, group_name)
+            self.load_words()
 
     def load_groups(self):
         self.group_list.delete(0, tk.END)

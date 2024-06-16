@@ -1,4 +1,6 @@
 import json
+import csv
+from tkinter import messagebox
 
 class Vocab:
     def __init__(self, word, definition, active=True):
@@ -53,6 +55,21 @@ class WordManager:
                     group.vocab_list.append(Vocab(word, definition))
                     self.save_groups()
                 break
+
+    # import csv from file
+    def import_vocab_from_csv(self, group_name, file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as file:
+                csv_reader = csv.reader(file)
+                for row in csv_reader:
+                    if len(row) >= 2:
+                        word = row[0].strip()
+                        definition = row[1].strip()
+                        self.add_vocab(group_name, word, definition)
+        except FileNotFoundError:
+            messagebox.showerror("Error", "File not found.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
     def delete_vocab(self, group_name, word):
         for group in self.groups:
