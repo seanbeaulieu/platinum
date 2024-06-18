@@ -5,7 +5,6 @@ Python application that runs either windowed or in the system tray to periodical
 Run main.py to test.
 
 Roadmap:
-- Import sets from file into group
 - Improve thread stop response time
 - Select multiple words/groups
 - Support for MacOS / Windows 11
