@@ -1,1 +1,1 @@
-[]
+[{"name": "testgroup", "vocab_list": [{"word": "hello", "definition": "greeting", "active": true}, {"word": "goodbye", "definition": "saying goodbye", "active": true}, {"word": "nansdfn", "definition": "asdasd", "active": true}], "active": true}, {"name": "hello", "vocab_list": [], "active": true}]
