@@ -12,3 +12,4 @@ Roadmap:
 - Add start on system boot
 - Add quiz functionality
  
+![pythonw_JIqhYbb1h9](https://github.com/seanbeaulieu/platinum/assets/54913639/9bbcacc9-e54d-4ac6-8211-37154ad85b36)
