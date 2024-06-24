@@ -5,11 +5,10 @@ Python application that runs either windowed or in the system tray to periodical
 Run main.py to test.
 
 Roadmap:
-- Improve thread stop response time
 - Select multiple words/groups
 - Support for MacOS / Windows 11
-- Improve GUI design
 - Add start on system boot
-- Add quiz functionality
+- Add quiz functionality / spaced repetition active recall
+- Custom file format importing support
  
 ![pythonw_JIqhYbb1h9](https://github.com/seanbeaulieu/platinum/assets/54913639/9bbcacc9-e54d-4ac6-8211-37154ad85b36)
